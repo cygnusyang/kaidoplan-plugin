@@ -356,3 +356,9 @@ AI：逐任务实现 → status_update done → 群组完成度自动聚合
 
 - **实测通过**（macOS，KaidoPlan v0.8.0 release 产物，2026-10-23）：§2、§4A、§4B、§5 的 KaidoPlan 侧命令，§8 全流程，插件 hook 回写。
 - **未实测**：Codex 桌面版加载 `[mcp_servers.kaido]` 后工具是否即时可见（本机 `codex` CLI 不在 PATH）；CodeBuddy 的 `TaskCompleted` 事件 payload 字段（文档只列事件名未列字段，故未做 CodeBuddy 版 hook）。
+
+## 协议
+
+本仓库内容（插件 manifest、MCP 配置、hook 脚本、斜杠命令、包装脚本）以 [MIT 协议](LICENSE) 开源——欢迎 fork、修改、发布你自己的版本；改进欢迎以 PR 提到[主仓](https://github.com/cygnusyang/KaidoPlan/tree/main/Plugins)。
+
+它调度的 KaidoPlan 应用与 CLI 二进制仍是专有软件，需要有效的 license 或订阅。

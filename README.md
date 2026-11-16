@@ -383,3 +383,9 @@ Two collaboration rules:
 - **Verified** (macOS, KaidoPlan v0.9.1 release binaries, 2026-10-25): §2 including the MCP probe, §8 end to end with English CLI output.
 - **Verified earlier** (KaidoPlan v0.8.0, 2026-10-23, re-checked against the current tree but not re-run): §4A / §4B / §5 KaidoPlan-side commands and the plugin hook write-back.
 - **Not verified**: whether Codex desktop exposes the `[mcp_servers.kaido]` tools immediately (no `codex` CLI on PATH here); CodeBuddy's `TaskCompleted` event payload fields (its docs list the event name but not the fields, so no CodeBuddy hook exists).
+
+## License
+
+This repository (plugin manifest, MCP configuration, hook scripts, slash commands, wrapper scripts) is released under the [MIT License](LICENSE) — fork it, tweak it, ship your own flavor; improvements welcome via PR against the [main repo](https://github.com/cygnusyang/KaidoPlan/tree/main/Plugins).
+
+The KaidoPlan application and CLI binaries it orchestrates remain proprietary and require a valid license or subscription.

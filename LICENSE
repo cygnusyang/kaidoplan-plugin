@@ -1,23 +1,29 @@
-KaidoPlan — Proprietary Software
+MIT License
 
-Copyright (c) 2026 Ruohu Yang. All rights reserved.
+Copyright (c) 2026 Ruohu Yang (cygnus)
 
-KaidoPlan is proprietary software. This repository — its source code, tests, design
-documents and build scripts — is confidential and is not published.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-Use of the KaidoPlan application is governed by the terms you accept when you
-download or purchase it. Copies distributed through the App Store are licensed
-under Apple's Standard End User License Agreement in addition to those terms.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-No permission is granted to copy, modify, merge, publish, distribute, sublicense,
-sell, lease or reverse-engineer the software, except as expressly allowed by the
-terms above or by applicable law that cannot be waived.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
-History: versions up to v2.3.0 were published as source under PolyForm
-Noncommercial 1.0.0 (v1.3.3 - v2.3.0) and MIT (up to v1.3.2). Those grants remain
-valid for the versions that carried them; they do not extend to v2.3.1 or later.
+---
 
-Third-party components remain under their own licenses, listed in the app's
-"Open Source Licenses" panel.
-
-Contact: ruohuyang@163.com
+Scope note: this license covers the plugin bridge code in this repository
+(manifest, MCP configuration, hook scripts, slash commands, wrapper scripts).
+It does not relicense the KaidoPlan application or CLI binaries this plugin
+orchestrates — those remain proprietary and require a valid KaidoPlan license
+or subscription (see https://kaidoplan.cygnusyang.top/#pricing).
