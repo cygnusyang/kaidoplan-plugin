@@ -1,0 +1,23 @@
+KaidoPlan — Proprietary Software
+
+Copyright (c) 2026 Ruohu Yang. All rights reserved.
+
+KaidoPlan is proprietary software. This repository — its source code, tests, design
+documents and build scripts — is confidential and is not published.
+
+Use of the KaidoPlan application is governed by the terms you accept when you
+download or purchase it. Copies distributed through the App Store are licensed
+under Apple's Standard End User License Agreement in addition to those terms.
+
+No permission is granted to copy, modify, merge, publish, distribute, sublicense,
+sell, lease or reverse-engineer the software, except as expressly allowed by the
+terms above or by applicable law that cannot be waived.
+
+History: versions up to v2.3.0 were published as source under PolyForm
+Noncommercial 1.0.0 (v1.3.3 - v2.3.0) and MIT (up to v1.3.2). Those grants remain
+valid for the versions that carried them; they do not extend to v2.3.1 or later.
+
+Third-party components remain under their own licenses, listed in the app's
+"Open Source Licenses" panel.
+
+Contact: ruohuyang@163.com

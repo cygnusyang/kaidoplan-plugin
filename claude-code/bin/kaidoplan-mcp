@@ -1,0 +1,32 @@
+#!/bin/sh
+# 启动 KaidoPlan MCP 服务（stdio）。优先使用 KAIDOPLAN_MCP_BIN，其次仓库构建产物。
+set -eu
+
+if [ -n "${KAIDOPLAN_MCP_BIN:-}" ]; then
+  exec "$KAIDOPLAN_MCP_BIN"
+fi
+
+root="$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)"
+for candidate in "$root/.build/release/KaidoPlanMCP" "$root/.build/debug/KaidoPlanMCP"; do
+  if [ -x "$candidate" ]; then
+    exec "$candidate"
+  fi
+done
+
+# 独立插件仓（kaidoplan-plugin）没有本仓的 .build 目录：brew 安装版兜底。
+# 排除自身，避免 PATH 恰好含本插件 bin 目录时 exec 自身死循环。
+self_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+self="$self_dir/$(basename -- "$0")"
+for name in kaidoplan-mcp KaidoPlanMCP; do
+  resolved="$(command -v "$name" 2>/dev/null || true)"
+  if [ -z "$resolved" ]; then continue; fi
+  if ! resolved_dir="$(CDPATH= cd -- "$(dirname -- "$resolved")" 2>/dev/null && pwd)"; then continue; fi
+  resolved="$resolved_dir/$(basename -- "$resolved")"
+  if [ "$resolved" = "$self" ]; then continue; fi
+  if [ -x "$resolved" ]; then
+    exec "$resolved"
+  fi
+done
+
+echo "kaidoplan-mcp: 未找到 KaidoPlanMCP 构建产物。请先运行 'swift build -c release'，或设置 KAIDOPLAN_MCP_BIN。" >&2
+exit 1
