@@ -19,11 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-Scope note: this license covers the plugin bridge code in this repository
-(manifest, MCP configuration, hook scripts, slash commands, wrapper scripts).
-It does not relicense the KaidoPlan application or CLI binaries this plugin
-orchestrates — those remain proprietary and require a valid KaidoPlan license
-or subscription (see https://kaidoplan.cygnusyang.top/#pricing).
