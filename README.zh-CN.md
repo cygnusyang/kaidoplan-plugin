@@ -1,13 +1,30 @@
-> **正本在主仓**：[`cygnusyang/KaidoPlan` → `Plugins/`](https://github.com/cygnusyang/KaidoPlan/tree/main/Plugins)——本仓是 Claude Code 插件的独立安装入口，issue 与 PR 请提到主仓。
-
 # 用 AI 智能体做项目：KaidoPlan 接入指南
 
 > **四宿主粘贴包（Claude / Codex / Cursor / WorkBuddy）：** [docs/agents/](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/) — 复制即用的 MCP 与规则；`tools/list` = 21。
 
 [English](README.md) · **简体中文**
 
-> 面向两种人：① 想让 AI 帮忙拆 WBS、排期、盯进度的人；② 要给某个智能体（Claude Code / CodeBuddy / Codex）接上 KaidoPlan 的人。
-> 本文命令在 KaidoPlan v0.8.0（2026-10-23）用 release 产物实测通过；宿主侧配置按官方格式给出，边界见文末「验证范围」。
+> **正本在主仓**：[`cygnusyang/KaidoPlan` → `Plugins/`](https://github.com/cygnusyang/KaidoPlan/tree/main/Plugins)——本仓是 Claude Code 插件的独立安装入口，issue 与 PR 请提到主仓。
+
+> 面向两种人：① 想让 AI 帮忙拆 WBS、排期、盯进度的人；② 要给某个智能体（Claude Code / Codex / Cursor / Gemini CLI / VS Code / CodeBuddy / WorkBuddy）接上 KaidoPlan 的人。
+> 本文走查部分在 KaidoPlan v0.9.1（2026-10-25）用 release 产物实测通过；MCP 契约本身（`initialize` → `protocolVersion 2024-11-05`、`tools/list` → **21 个工具**）于 2026-11-16 在 v3.11.x 上复验。宿主侧配置按各家官方格式给出，边界见文末「验证范围」。
+
+## 兼容性：一个 MCP server，多家宿主通吃
+
+`kaidoplan-mcp` 就是一个普通的 **stdio JSON-RPC MCP server**——没有 SDK、没有框架、没有宿主专属方言。任何支持 stdio MCP 的客户端都能驱动它；插件/hook 只是叠在上面的便利层，不是额外能力：
+
+| 宿主 | 接法 | 配置落点 | 本仓提供的额外件 |
+|---|---|---|---|
+| Claude Code | MCP，或完整插件 | `.mcp.json` | 插件：3 个斜杠命令 + `TaskCompleted` 回写 hook |
+| Codex CLI | MCP | `~/.codex/config.toml` | 规则块写 `AGENTS.md` |
+| Cursor | MCP | `~/.cursor/mcp.json` 或 `.cursor/mcp.json` | 规则块写 `AGENTS.md` / `.cursor/rules/` |
+| Gemini CLI | MCP | `~/.gemini/settings.json` 或 `.gemini/settings.json` | 规则块写 `GEMINI.md` / `AGENTS.md` |
+| VS Code（Copilot agent 模式） | MCP | `.vscode/mcp.json`（工作区）或用户配置 | 规则块写 `AGENTS.md` / `.github/copilot-instructions.md` |
+| CodeBuddy | MCP | `.mcp.json` | 规则块写 `CODEBUDDY.md` |
+| WorkBuddy | MCP | `~/.workbuddy/mcp.json` | 规则块写 `CODEBUDDY.md` / `AGENTS.md` |
+| 其他任何客户端 | stdio MCP | 各家自己的配置文件 | — |
+
+配置文件名与 schema 归各家所有，下面片段按其当前文档给出。本仓库自己实测的只有两件：stdio 探针（§2）与 Claude Code 插件 hook（有测试覆盖）。
 
 ## 0. 一句话说清分工
 
@@ -35,7 +52,7 @@ KaidoPlan 的三个入口同源（共用同一套写路径 `KaidoPlanSession`）
 所以本仓库的取舍：
 
 - **Claude Code**：保留完整插件（斜杠命令 + 自动回写 hook），已实测；
-- **CodeBuddy / Codex**：不装插件，一份 MCP 配置 + 一段写进规则文件的约定，零维护。
+- **其余宿主**（Codex / Cursor / Gemini CLI / VS Code / CodeBuddy / WorkBuddy）：不装插件，一份 MCP 配置 + 一段写进规则文件的约定，零维护。
 
 三种接法里，前两步（§2、§3）通用，做完再挑宿主。
 
@@ -88,7 +105,7 @@ printf '%s\n%s\n' \
 
 ## 3. 共用约定：把这段放进宿主的规则文件
 
-Codex 放 `AGENTS.md`，CodeBuddy 放 `CODEBUDDY.md`，Claude Code 放 `CLAUDE.md`（都在**项目根目录**）。把路径换成你的真实路径：
+Codex / Cursor 放 `AGENTS.md`，Gemini CLI 放 `GEMINI.md`（或 `AGENTS.md`），CodeBuddy 放 `CODEBUDDY.md`，Claude Code 放 `CLAUDE.md`（都在**项目根目录**）。把路径换成你的真实路径：
 
 ```markdown
 ## KaidoPlan 项目管理
@@ -195,6 +212,68 @@ Codex 里没有 `/kaidoplan plan`，用一句话触发同样流程：
 ```
 
 > 本机 `codex` CLI 不在 PATH（装的是桌面版），上述 `config.toml` 按其现有 `[mcp_servers.*]` 结构给出；首次使用请确认 `codex` 能列出 kaidoplan 工具。
+
+## 其他 MCP 宿主（Cursor · Gemini CLI · VS Code · WorkBuddy）
+
+这四家都是 MCP-only：同一个 server、同样 21 个工具、同一段规则块。二进制名以 `command -v kaidoplan-mcp` 的输出为准——宿主不继承你的 shell `PATH` 时写绝对路径。
+
+### Cursor
+
+```bash
+# 项目级（随仓库提交）
+mkdir -p .cursor
+cat > .cursor/mcp.json <<'EOF'
+{ "mcpServers": { "kaidoplan": { "command": "kaidoplan-mcp" } } }
+EOF
+```
+
+用户级：把同样的 `mcpServers.kaidoplan` 合并进 `~/.cursor/mcp.json`——**合并，不要整文件覆盖**，那里面还有你其他的 server。规则：把 §3 那段放进项目根的 `AGENTS.md`，或写成 `.cursor/rules/kaidoplan.mdc`。
+
+### Gemini CLI
+
+```bash
+# 项目级；全局安装把同一个对象写到 ~/.gemini/settings.json
+mkdir -p .gemini
+cat > .gemini/settings.json <<'EOF'
+{ "mcpServers": { "kaidoplan": { "command": "kaidoplan-mcp", "args": [] } } }
+EOF
+```
+
+在 Gemini CLI 里用 `/mcp` 看连接状态；规则写 `GEMINI.md`（或 `AGENTS.md`）。
+
+### VS Code（Copilot agent 模式）
+
+VS Code 用的是 **`servers`** 对象，不是 `mcpServers`：
+
+```bash
+mkdir -p .vscode
+cat > .vscode/mcp.json <<'EOF'
+{
+  "servers": {
+    "kaidoplan": { "type": "stdio", "command": "kaidoplan-mcp" }
+  }
+}
+EOF
+```
+
+然后在扩展面板的 MCP servers 视图里手动启动它（VS Code 不会自动拉起 stdio server）。规则：`AGENTS.md` 或 `.github/copilot-instructions.md`。
+
+### WorkBuddy
+
+```bash
+python3 - <<'PY'
+import json, pathlib, shutil
+path = pathlib.Path.home() / ".workbuddy" / "mcp.json"
+mcp_bin = shutil.which("kaidoplan-mcp") or "/opt/homebrew/bin/kaidoplan-mcp"
+path.parent.mkdir(parents=True, exist_ok=True)
+data = json.loads(path.read_text()) if path.exists() else {}
+data.setdefault("mcpServers", {})["kaidoplan"] = {"type": "stdio", "command": mcp_bin, "args": []}
+path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+print("wrote", path)
+PY
+```
+
+新加进去的条目不会自己生效：在 WorkBuddy 的连接器列表里对 `kaidoplan` 点一次**信任**。
 
 ## 7. WBS 怎么拆（重点）
 
@@ -346,7 +425,7 @@ AI：逐任务实现 → status_update done → 群组完成度自动聚合
 |---|---|---|
 | `command not found` / 找不到 KaidoPlanMCP | 未构建或路径写错 | `swift build -c release`，配置里用绝对路径 |
 | MCP 连上但工具报「未打开项目」 | 工具不会读环境变量，需显式路径 | 先 `project_open`，或在规则文件里写死路径 |
-| `kaidoplan-mcp: 未找到 KaidoPlanMCP 构建产物` | 用了插件启动脚本但没构建 | 构建，或设 `KAIDOPLAN_MCP_BIN` |
+| `kaidoplan-mcp: KaidoPlanMCP not found` | 仓库里没有构建产物，`PATH` 上也没有 `kaidoplan-mcp` | `brew install cygnusyang/kaidoplan/kaidoplan-cli`，或构建，或设 `KAIDOPLAN_MCP_BIN` |
 | Claude Code 任务完成但没回写 | 标题不唯一 / 缺 `KAIDOPLAN_PROJECT` / 找不到 CLI | 看 stderr 的 `kaidoplan-hook:` 行；设 `KAIDOPLAN_CLI_BIN` |
 | 应用与 AI 同时改同一个 `.kaido` | 无自动合并 | 应用会提示重新载入；回写期间关应用 |
 | 排期日期差一天 | 输出是 UTC，应用显示本地 | 以应用或 `--json` 的本地日期为准 |
@@ -355,7 +434,8 @@ AI：逐任务实现 → status_update done → 群组完成度自动聚合
 ## 11. 验证范围
 
 - **实测通过**（macOS，KaidoPlan v0.8.0 release 产物，2026-10-23）：§2、§4A、§4B、§5 的 KaidoPlan 侧命令，§8 全流程，插件 hook 回写。
-- **未实测**：Codex 桌面版加载 `[mcp_servers.kaido]` 后工具是否即时可见（本机 `codex` CLI 不在 PATH）；CodeBuddy 的 `TaskCompleted` 事件 payload 字段（文档只列事件名未列字段，故未做 CodeBuddy 版 hook）。
+- **复验**（2026-11-16，v3.11.x）：stdio MCP 契约——`initialize` 返回 `protocolVersion 2024-11-05`，`tools/list` 返回 **21 个工具**（前四个为 `project_create`、`project_open`、`project_save`、`task_add`）。
+- **未实测**：Cursor / Gemini CLI / VS Code / WorkBuddy 的片段——文件名与 schema 按各家文档（2026-11-16 核对）给出，但本机未在这几个客户端上实际跑通；Codex 桌面版加载 `[mcp_servers.kaido]` 后工具是否即时可见（本机 `codex` CLI 不在 PATH）；CodeBuddy 的 `TaskCompleted` 事件 payload 字段（文档只列事件名未列字段，故未做 CodeBuddy 版 hook）。
 
 ## 协议
 

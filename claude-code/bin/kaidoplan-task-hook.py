@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Claude Code TaskCompleted hook：按任务标题回写 KaidoPlan 状态。
+"""Claude Code TaskCompleted hook: write the matching KaidoPlan task status back.
 
-输入：Claude Code 经 stdin 传入的事件 JSON（hook_event_name == "TaskCompleted"，
-含 task_subject）。KaidoPlan 任务无 ID 映射时，标题是两系统之间唯一稳定的连接键。
+Input: the event JSON Claude Code writes to stdin (hook_event_name ==
+"TaskCompleted", carrying task_subject). KaidoPlan tasks have no shared ID space
+with Claude Code tasks, so the title is the only stable key between the two.
 
-规则：
-- 仅在 KAIDOPLAN_PROJECT 指向 .kaido 文件、且标题恰好匹配一个 KaidoPlan 任务时回写。
-- 已为 done 的任务跳过；匹配 0 个或多个时只写 stderr，不改数据。
-- 始终以 0 退出，不阻塞 Claude Code 的任务完成。
-- 对项目文件加排他锁，避免并行子代理同时完成时互相覆盖回写结果。
+Rules:
+- Write back only when KAIDOPLAN_PROJECT points at a .kaido file and the title
+  matches exactly one KaidoPlan task.
+- Tasks already marked done are skipped; zero or several matches only print to
+  stderr and leave the data untouched.
+- Always exit 0: a hook must never block task completion in the host.
+- Take an exclusive lock on the project so parallel sub-agents finishing at the
+  same time cannot overwrite each other's write-back.
 """
 
 import fcntl
@@ -23,7 +27,7 @@ import unicodedata
 
 
 def find_cli():
-    """与 bin/kaidoplan-mcp 相同的查找顺序：环境变量 → 仓库构建产物 → PATH → 无。"""
+    """Same order as bin/kaidoplan-mcp: env var, build products, PATH, none."""
     override = os.environ.get("KAIDOPLAN_CLI_BIN")
     if override:
         return override
@@ -32,24 +36,24 @@ def find_cli():
         candidate = os.path.join(root, ".build", configuration, "KaidoPlanCLI")
         if os.access(candidate, os.X_OK):
             return candidate
-    # 独立插件仓（kaidoplan-plugin）没有本仓的 .build 目录：brew 安装版兜底。
-    # 放在仓库构建产物之后，开发者在主仓跑本地构建时行为不变。
+    # The standalone plugin repo has no .build directory: use the PATH binary.
+    # Kept after the build products so local builds in the main repo still win.
     return shutil.which("kaidoplan")
 
 
 def note(message):
-    """向 stderr 写一行；剥离控制字符，避免把事件文本原样注入终端。"""
+    """Write one line to stderr, stripping control characters."""
     clean = "".join(ch for ch in str(message) if unicodedata.category(ch)[0] != "C")
     print(f"kaidoplan-hook: {clean}", file=sys.stderr)
 
 
 def normalize(text):
-    """标题比较前统一 Unicode 形式与首尾空白。"""
+    """Normalise Unicode form and surrounding whitespace before comparing titles."""
     return unicodedata.normalize("NFC", text).strip()
 
 
 def run(cli, args):
-    """执行 CLI，返回 (ok, stdout, stderr)。"""
+    """Run the CLI and return (ok, stdout, stderr)."""
     try:
         result = subprocess.run(
             [cli] + args, capture_output=True, text=True, encoding="utf-8", timeout=10
@@ -60,19 +64,19 @@ def run(cli, args):
 
 
 def sync_status(cli, project, subject):
-    """在项目文件锁内完成「读取列表 → 匹配标题 → 回写」。"""
+    """Read the task list, match the title and write the status back, all under lock."""
     ok, stdout, stderr = run(cli, ["task", "list", "--json", "--file", project])
     if not ok:
-        note(f"读取任务列表失败：{stderr.strip()}")
+        note(f"could not read the task list: {stderr.strip()}")
         return
 
     try:
         tasks = json.loads(stdout)
     except json.JSONDecodeError:
-        note("任务列表不是合法 JSON，跳过")
+        note("task list is not valid JSON, skipping")
         return
     if not isinstance(tasks, list):
-        note("任务列表格式不符，跳过")
+        note("task list has an unexpected shape, skipping")
         return
 
     matches = [
@@ -83,7 +87,7 @@ def sync_status(cli, project, subject):
         and normalize(task["title"]) == subject
     ]
     if len(matches) != 1:
-        note(f"「{subject}」匹配 {len(matches)} 个 KaidoPlan 任务，跳过回写")
+        note(f'"{subject}" matches {len(matches)} KaidoPlan tasks, skipping write-back')
         return
 
     task = matches[0]
@@ -95,19 +99,19 @@ def sync_status(cli, project, subject):
         ["status", "update", str(task.get("id", "")), "--status", "done", "--file", project],
     )
     if ok:
-        note(f"已回写「{subject}」为 done")
+        note(f'wrote back "{subject}" as done')
     else:
-        note(f"状态回写失败：{stderr.strip()}")
+        note(f"status write-back failed: {stderr.strip()}")
 
 
 def main():
     try:
         event = json.loads(sys.stdin.read())
     except (json.JSONDecodeError, UnicodeDecodeError):
-        note("输入不是合法 JSON，跳过")
+        note("input is not valid JSON, skipping")
         return 0
     if not isinstance(event, dict):
-        note("事件不是 JSON 对象，跳过")
+        note("event is not a JSON object, skipping")
         return 0
 
     if event.get("hook_event_name") != "TaskCompleted":
@@ -123,11 +127,11 @@ def main():
 
     cli = find_cli()
     if cli is None:
-        note("未找到 KaidoPlanCLI，跳过（先 swift build，或设置 KAIDOPLAN_CLI_BIN）")
+        note("KaidoPlanCLI not found, skipping (run swift build, install via Homebrew, or set KAIDOPLAN_CLI_BIN)")
         return 0
 
-    # CLI 以原子替换写文件，项目文件的 inode 会变，不能直接锁它；
-    # 改锁按项目真实路径派生的稳定排他锁，避免并行完成互相覆盖。
+    # The CLI writes atomically, so the project file's inode changes and locking it
+    # directly is useless. Lock a stable path derived from the real project path.
     real = os.path.realpath(project)
     lock_name = "kaidoplan-hook-" + hashlib.sha256(real.encode()).hexdigest()[:16] + ".lock"
     lock_path = os.path.join(tempfile.gettempdir(), lock_name)
@@ -139,13 +143,13 @@ def main():
             finally:
                 fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
     except OSError as error:
-        note(f"无法获取项目锁：{error}")
+        note(f"could not take the project lock: {error}")
     return 0
 
 
 if __name__ == "__main__":
     try:
         sys.exit(main())
-    except Exception as error:  # noqa: BLE001 - hook 不阻塞任务完成
-        note(f"意外错误，跳过：{error}")
+    except Exception as error:  # noqa: BLE001 - a hook must not block task completion
+        note(f"unexpected error, skipping: {error}")
         sys.exit(0)

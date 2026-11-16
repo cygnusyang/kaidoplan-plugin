@@ -1,13 +1,30 @@
-> **Source of truth:** [`cygnusyang/KaidoPlan` → `Plugins/`](https://github.com/cygnusyang/KaidoPlan/tree/main/Plugins) — this repo is the standalone install target for the Claude Code plugin; file issues and PRs against the main repo.
-
 # KaidoPlan for AI agents
 
 > **Paste packs (Claude / Codex / Cursor / WorkBuddy):** [docs/agents/](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/) — copy-ready MCP + rules; `tools/list` = 21.
 
 **English** · [简体中文](README.zh-CN.md)
 
-> Two audiences: ① you want an AI to break down a WBS, produce a schedule and track progress; ② you want to wire KaidoPlan into an agent (Claude Code / CodeBuddy / Codex).
-> Every command below was run against KaidoPlan v0.9.1 release binaries on macOS (2026-10-25). Host-side configuration follows each vendor's documented format — see "Scope of verification" at the end.
+> **Source of truth:** [`cygnusyang/KaidoPlan` → `Plugins/`](https://github.com/cygnusyang/KaidoPlan/tree/main/Plugins) — this repo is the standalone install target for the Claude Code plugin; file issues and PRs against the main repo.
+
+> Two audiences: ① you want an AI to break down a WBS, produce a schedule and track progress; ② you want to wire KaidoPlan into an agent (Claude Code / Codex / Cursor / Gemini CLI / VS Code / CodeBuddy / WorkBuddy).
+> The walkthrough in this page was run against KaidoPlan v0.9.1 release binaries on macOS (2026-10-25); the MCP contract itself (`initialize` → `protocolVersion 2024-11-05`, `tools/list` → **21 tools**) was re-verified on 2026-11-16 against v3.11.x. Host-side configuration follows each vendor's documented format — see "Scope of verification" at the end.
+
+## Compatibility: one MCP server, many hosts
+
+`kaidoplan-mcp` is a plain **stdio JSON-RPC MCP server** — no SDK, no framework, no host-specific dialect. Anything that speaks MCP over stdio can drive it. A plugin/hook is convenience layered on top, never extra capability:
+
+| Host | How to connect | Config drop | Extras in this repo |
+|---|---|---|---|
+| Claude Code | MCP, or the full plugin | `.mcp.json` | plugin: 3 slash commands + `TaskCompleted` write-back hook |
+| Codex CLI | MCP | `~/.codex/config.toml` | rules block in `AGENTS.md` |
+| Cursor | MCP | `~/.cursor/mcp.json` or `.cursor/mcp.json` | rules block in `AGENTS.md` / `.cursor/rules/` |
+| Gemini CLI | MCP | `~/.gemini/settings.json` or `.gemini/settings.json` | rules block in `GEMINI.md` / `AGENTS.md` |
+| VS Code (Copilot agent mode) | MCP | `.vscode/mcp.json` (workspace) or user profile | rules block in `AGENTS.md` / `.github/copilot-instructions.md` |
+| CodeBuddy | MCP | `.mcp.json` | rules block in `CODEBUDDY.md` |
+| WorkBuddy | MCP | `~/.workbuddy/mcp.json` | rules block in `CODEBUDDY.md` / `AGENTS.md` |
+| Anything else | MCP over stdio | your client's own file | — |
+
+Config file names and schemas belong to each vendor; the snippets below follow their current documentation. Two things are exercised by this repository itself: the stdio probe (§2) and the Claude Code plugin hook (its tests).
 
 ## 0. Division of labour, in one table
 
@@ -35,7 +52,7 @@ The hook exists to **bridge Claude Code's own task system** (TaskCreate / TaskCo
 So this repository chooses:
 
 - **Claude Code**: full plugin kept (slash commands + automatic write-back hook), tested;
-- **CodeBuddy / Codex**: no plugin — one MCP config plus a convention written into the rules file, zero maintenance.
+- **Every other host** (Codex / Cursor / Gemini CLI / VS Code / CodeBuddy / WorkBuddy): no plugin — one MCP config plus a convention written into the rules file, zero maintenance.
 
 Of the three wirings, the first two steps (§2, §3) are shared; do those, then pick a host.
 
@@ -93,7 +110,7 @@ printf '%s\n%s\n' \
 
 ## 3. Shared convention: put this into the host's rules file
 
-Codex reads `AGENTS.md`, CodeBuddy reads `CODEBUDDY.md`, Claude Code reads `CLAUDE.md` — all at the **project root**. Replace the path with your real one:
+Codex / Cursor read `AGENTS.md`, Gemini CLI reads `GEMINI.md` (or `AGENTS.md`), CodeBuddy reads `CODEBUDDY.md`, Claude Code reads `CLAUDE.md` — all at the **project root**. Replace the path with your real one:
 
 ```markdown
 ## KaidoPlan project management
@@ -202,6 +219,68 @@ When a task is done, let it use the CLI (more controllable than MCP, and easier 
 ```
 
 > The `codex` CLI is not on PATH on this machine (the desktop app is installed instead); the `config.toml` snippet above follows its existing `[mcp_servers.*]` structure. On first use, confirm that `codex` lists the kaidoplan tools.
+
+## Other MCP hosts (Cursor · Gemini CLI · VS Code · WorkBuddy)
+
+All four are MCP-only: same server, same 21 tools, same rules block. The binary name is whatever `command -v kaidoplan-mcp` prints — use the absolute path if your host does not inherit your shell `PATH`.
+
+### Cursor
+
+```bash
+# project level (committed with the repo)
+mkdir -p .cursor
+cat > .cursor/mcp.json <<'EOF'
+{ "mcpServers": { "kaidoplan": { "command": "kaidoplan-mcp" } } }
+EOF
+```
+
+User level: merge the same `mcpServers.kaidoplan` entry into `~/.cursor/mcp.json` — merge, never overwrite, that file holds your other servers. Rules: put the §3 block in `AGENTS.md` at the project root, or as `.cursor/rules/kaidoplan.mdc`.
+
+### Gemini CLI
+
+```bash
+# project level; for a global install write the same object to ~/.gemini/settings.json
+mkdir -p .gemini
+cat > .gemini/settings.json <<'EOF'
+{ "mcpServers": { "kaidoplan": { "command": "kaidoplan-mcp", "args": [] } } }
+EOF
+```
+
+Check the connection with `/mcp` inside Gemini CLI; rules go into `GEMINI.md` (or `AGENTS.md`).
+
+### VS Code (Copilot agent mode)
+
+VS Code uses a **`servers`** object, not `mcpServers`:
+
+```bash
+mkdir -p .vscode
+cat > .vscode/mcp.json <<'EOF'
+{
+  "servers": {
+    "kaidoplan": { "type": "stdio", "command": "kaidoplan-mcp" }
+  }
+}
+EOF
+```
+
+Then start it from the MCP servers view in the Extensions panel (VS Code does not auto-start stdio servers until you do). Rules: `AGENTS.md` or `.github/copilot-instructions.md`.
+
+### WorkBuddy
+
+```bash
+python3 - <<'PY'
+import json, pathlib, shutil
+path = pathlib.Path.home() / ".workbuddy" / "mcp.json"
+mcp_bin = shutil.which("kaidoplan-mcp") or "/opt/homebrew/bin/kaidoplan-mcp"
+path.parent.mkdir(parents=True, exist_ok=True)
+data = json.loads(path.read_text()) if path.exists() else {}
+data.setdefault("mcpServers", {})["kaidoplan"] = {"type": "stdio", "command": mcp_bin, "args": []}
+path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+print("wrote", path)
+PY
+```
+
+A newly added entry does not activate by itself: open the connector list in WorkBuddy and click **Trust** on `kaidoplan`.
 
 ## 7. How to break down a WBS (the important part)
 
@@ -372,7 +451,7 @@ Two collaboration rules:
 |---|---|---|
 | `command not found` / KaidoPlanMCP not found | Not built, or the path is wrong | `swift build -c release`, and use absolute paths in the config |
 | MCP connected but tools say "no project open" | Tools do not read environment variables; they need an explicit path | Call `project_open` first, or hard-code the path in the rules file |
-| `kaidoplan-mcp: KaidoPlanMCP build product not found` | The plugin launch script ran without a build | Build, or set `KAIDOPLAN_MCP_BIN` |
+| `kaidoplan-mcp: KaidoPlanMCP not found` | Neither a build in the checkout nor `kaidoplan-mcp` on `PATH` | `brew install cygnusyang/kaidoplan/kaidoplan-cli`, build, or set `KAIDOPLAN_MCP_BIN` |
 | A Claude Code task completed but nothing was written back | Title not unique / `KAIDOPLAN_PROJECT` missing / CLI not found | Read the `kaidoplan-hook:` lines on stderr; set `KAIDOPLAN_CLI_BIN` |
 | App and AI editing the same `.kaido` | No automatic merge | The app offers to reload; close the app during write-back |
 | Scheduled dates off by one day | Output is UTC, the app shows local time | Trust the app or the local dates in `--json` |
@@ -381,8 +460,9 @@ Two collaboration rules:
 ## 11. Scope of verification
 
 - **Verified** (macOS, KaidoPlan v0.9.1 release binaries, 2026-10-25): §2 including the MCP probe, §8 end to end with English CLI output.
+- **Re-verified** (2026-11-16, v3.11.x): the MCP contract over stdio — `initialize` returns `protocolVersion 2024-11-05`, `tools/list` returns **21 tools** starting with `project_create`, `project_open`, `project_save`, `task_add`.
 - **Verified earlier** (KaidoPlan v0.8.0, 2026-10-23, re-checked against the current tree but not re-run): §4A / §4B / §5 KaidoPlan-side commands and the plugin hook write-back.
-- **Not verified**: whether Codex desktop exposes the `[mcp_servers.kaido]` tools immediately (no `codex` CLI on PATH here); CodeBuddy's `TaskCompleted` event payload fields (its docs list the event name but not the fields, so no CodeBuddy hook exists).
+- **Not verified**: the Cursor / Gemini CLI / VS Code / WorkBuddy snippets — file names and schemas follow each vendor's documentation (checked 2026-11-16) but were not exercised against those clients here; whether Codex desktop exposes the `[mcp_servers.kaido]` tools immediately (no `codex` CLI on PATH here); CodeBuddy's `TaskCompleted` event payload fields (its docs list the event name but not the fields, so no CodeBuddy hook exists).
 
 ## License
 

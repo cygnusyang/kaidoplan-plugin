@@ -1,24 +1,28 @@
 ---
-description: 汇总 KaidoPlan 项目的计划、重要路径与违例
+description: Summarise the plan, critical path and violations of a KaidoPlan project
 ---
 
-汇总当前 KaidoPlan 项目的计划状态。
+Summarise the current KaidoPlan project.
 
-步骤：
+Steps:
 
-1. 若当前会话尚未打开项目，先用 `project_open` 打开 `KAIDOPLAN_PROJECT` 指向的文件
-   （未设置时询问用户）。
-2. 依次调用：
-   - `task_list`（空参数）取任务清单；
-   - `schedule_compute` 取排期；
-   - `schedule_critical_path` 取重要路径与宽延；
-   - `violations_list` 取违例。
-3. 用紧凑表格输出每个任务：ID 前缀、标题、状态、进度、持续天数、计划开始/结束、总宽延。
-   群组行按层级缩进；里程碑持续为 0。
-4. 违例逐条列出：违例码、涉及任务、原因。
-5. 末尾给出三行汇总：任务数（完成/进行中/待办/阻塞）、重要路径任务数、违例数。
+1. If no project is open in this session yet, open the file `KAIDOPLAN_PROJECT` points at with
+   `project_open` (ask the user when it is unset).
+2. Call, in order:
+   - `task_list` (no arguments) for the task list;
+   - `schedule_compute` for the schedule;
+   - `schedule_critical_path` for the critical path and slack;
+   - `violations_list` for violations.
+3. Print one compact table row per task: ID prefix, title, status, progress, duration in days, planned
+   start/end, total slack. Indent group rows by depth; milestones have zero duration.
+4. List every violation with its code, the tasks involved and the reason.
+5. Close with three summary lines: task count (done / in progress / pending / blocked), critical-path task
+   count, violation count.
 
-约束：
+Constraints:
 
-- 只读，不修改任何任务。
-- 排期或违例工具报错时原样转述错误码与消息，不要用估算值替代。
+- Read-only: do not modify any task.
+- When the schedule or violation tools return an error, relay the code and message verbatim; never
+  substitute an estimate.
+
+Reply to the user in the language they are writing in.

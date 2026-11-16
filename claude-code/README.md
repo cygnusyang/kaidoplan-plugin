@@ -6,13 +6,19 @@ Plug KaidoPlan's planning capability into Claude Code: slash commands drive WBS 
 
 ## Prerequisites
 
-1. Build the MCP server in this repository:
+Either install the binaries (recommended — puts `kaidoplan` and `kaidoplan-mcp` on your `PATH`):
 
-   ```bash
-   swift build -c release
-   ```
+```bash
+brew install cygnusyang/kaidoplan/kaidoplan-cli
+```
 
-2. Set `KAIDOPLAN_PROJECT` to the `.kaido` file path (put it in your shell config, or supply it at the prompt).
+…or build them from this repository:
+
+```bash
+swift build -c release
+```
+
+Then set `KAIDOPLAN_PROJECT` to the `.kaido` file path (put it in your shell config, or supply it at the prompt).
 
 ## Loading
 
@@ -20,15 +26,18 @@ Plug KaidoPlan's planning capability into Claude Code: slash commands drive WBS 
 claude --plugin-dir /path/to/KaidoPlan/Plugins/claude-code
 ```
 
+(Browsing the standalone repo instead? Point `--plugin-dir` at its `claude-code/` directory — the two are the same files.)
+
 The MCP launcher locates the server in this order:
 
 1. The executable named by the `KAIDOPLAN_MCP_BIN` environment variable;
 2. `.build/release/KaidoPlanMCP` in the repository;
-3. `.build/debug/KaidoPlanMCP` in the repository.
+3. `.build/debug/KaidoPlanMCP` in the repository;
+4. `kaidoplan-mcp` (or `KaidoPlanMCP`) on `PATH` — this is the Homebrew install, and the only step that works when the plugin lives outside the repository.
 
-Once loaded, the hook looks up `KaidoPlanCLI` in the same order (`KAIDOPLAN_CLI_BIN` → release → debug). When the plugin is installed outside the repository via a marketplace, the latter two paths do not exist and both environment variables must be set.
+The hook resolves `KaidoPlanCLI` the same way (`KAIDOPLAN_CLI_BIN` → release → debug → `kaidoplan` on `PATH`).
 
-If none of the three is found, the script writes the reason to stderr and exits non-zero.
+If none of the steps resolves, the script writes the reason to stderr and exits non-zero.
 
 ## Commands
 

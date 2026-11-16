@@ -7,13 +7,19 @@
 
 ## 前置条件
 
-1. 已在本仓库构建 MCP 服务：
+二选一。装二进制（推荐，一条命令把 `kaidoplan` 与 `kaidoplan-mcp` 放到 `PATH`）：
 
-   ```bash
-   swift build -c release
-   ```
+```bash
+brew install cygnusyang/kaidoplan/kaidoplan-cli
+```
 
-2. 设置 `KAIDOPLAN_PROJECT` 为 `.kaido` 文件路径（可放入 shell 配置），或在命令中按提示提供。
+或在本仓库构建：
+
+```bash
+swift build -c release
+```
+
+然后设置 `KAIDOPLAN_PROJECT` 为 `.kaido` 文件路径（可放入 shell 配置），或在命令中按提示提供。
 
 ## 加载
 
@@ -21,16 +27,18 @@
 claude --plugin-dir /path/to/KaidoPlan/Plugins/claude-code
 ```
 
+（用的是独立插件仓？把 `--plugin-dir` 指向它的 `claude-code/` 目录——两边是同一批文件。）
+
 MCP 启动脚本按以下顺序定位服务：
 
 1. 环境变量 `KAIDOPLAN_MCP_BIN` 指定的可执行文件；
 2. 仓库 `.build/release/KaidoPlanMCP`；
-3. 仓库 `.build/debug/KaidoPlanMCP`。
+3. 仓库 `.build/debug/KaidoPlanMCP`；
+4. `PATH` 上的 `kaidoplan-mcp`（或 `KaidoPlanMCP`）——brew 安装版走这一级，也是插件装在仓库外时唯一可用的一级。
 
-完成后 hook 按同样顺序查找 `KaidoPlanCLI`（`KAIDOPLAN_CLI_BIN` → release → debug）。插件经
-marketplace 安装到仓库外时，后两级路径不存在，必须设置这两个环境变量。
+hook 按同样顺序查找 `KaidoPlanCLI`（`KAIDOPLAN_CLI_BIN` → release → debug → `PATH` 上的 `kaidoplan`）。
 
-三者都找不到时，脚本向 stderr 输出原因并以非零码退出。
+四级都找不到时，脚本向 stderr 输出原因并以非零码退出。
 
 ## 命令
 

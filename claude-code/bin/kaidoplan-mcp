@@ -1,5 +1,6 @@
 #!/bin/sh
-# 启动 KaidoPlan MCP 服务（stdio）。优先使用 KAIDOPLAN_MCP_BIN，其次仓库构建产物。
+# Launch the KaidoPlan MCP server (stdio). Resolution order: KAIDOPLAN_MCP_BIN,
+# then this checkout's build products, then PATH (Homebrew install).
 set -eu
 
 if [ -n "${KAIDOPLAN_MCP_BIN:-}" ]; then
@@ -13,8 +14,9 @@ for candidate in "$root/.build/release/KaidoPlanMCP" "$root/.build/debug/KaidoPl
   fi
 done
 
-# 独立插件仓（kaidoplan-plugin）没有本仓的 .build 目录：brew 安装版兜底。
-# 排除自身，避免 PATH 恰好含本插件 bin 目录时 exec 自身死循环。
+# The standalone plugin repo (kaidoplan-plugin) has no .build directory, so fall
+# back to the binary on PATH. Our own path is skipped: if the plugin's bin
+# directory is on PATH, exec-ing it would loop forever.
 self_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 self="$self_dir/$(basename -- "$0")"
 for name in kaidoplan-mcp KaidoPlanMCP; do
@@ -28,5 +30,5 @@ for name in kaidoplan-mcp KaidoPlanMCP; do
   fi
 done
 
-echo "kaidoplan-mcp: 未找到 KaidoPlanMCP 构建产物。请先运行 'swift build -c release'，或设置 KAIDOPLAN_MCP_BIN。" >&2
+echo "kaidoplan-mcp: KaidoPlanMCP not found. Run 'swift build -c release', install the CLI via Homebrew, or set KAIDOPLAN_MCP_BIN." >&2
 exit 1

@@ -1,29 +1,33 @@
 ---
-description: 读取需求并在 KaidoPlan 中建立 WBS、计算排期与违例
-argument-hint: <需求文档路径或需求描述>
+description: Read a requirement and build the WBS, schedule and violations in KaidoPlan
+argument-hint: <path to a requirements document, or a requirement description>
 ---
 
-在 KaidoPlan 中完成一次「需求 → WBS → 排期」规划。
+Run one "requirement → WBS → schedule" planning pass in KaidoPlan.
 
-需求输入：$ARGUMENTS
+Requirement input: $ARGUMENTS
 
-步骤：
+Steps:
 
-1. **确定项目文件**：优先使用环境变量 `KAIDOPLAN_PROJECT` 指向的 `.kaido` 路径；未设置时询问用户。
-   文件已存在则调用 `project_open`；不存在则调用 `project_create` 并直接传 `path` 指向该路径
-   （新建即落盘；写工具此后每次成功调用都会自动保存，无需再显式 `project_save`）。
-2. **读取需求**：输入是文件路径时完整读取该文件；否则以输入文字为准。
-   提取可交付成果、里程碑、先后依赖与不确定点。
-3. **拆分 WBS**：把结果整理为嵌套 JSON（`title`、`kind`、`effortHours`、`children`），
-   用 `wbs_import` 一次导入。叶子任务的投入按 8 小时工作日估算；不确定处在导入前向用户确认。
-4. **排期**：调用 `schedule_compute`，项目起止取自用户提供或元数据；
-   未提供时先询问，不要臆造日期。
-5. **违例**：调用 `violations_list`。逐条用一句话说明违例类型、涉及任务与原因；
-   不要自动改动时限或相关性，先向用户提出修正建议。
-6. **输出摘要**：任务总数、项目起止、重要路径（`schedule_critical_path`）与违例数。
+1. **Pick the project file**: prefer the `.kaido` path in `KAIDOPLAN_PROJECT`; ask the user when it is unset.
+   If the file exists call `project_open`; otherwise call `project_create` with `path` pointing at that
+   location (creating a project writes it to disk; every successful write tool call saves afterwards, so
+   an explicit `project_save` is not needed).
+2. **Read the requirement**: when the input is a file path, read that file in full; otherwise use the text
+   as given. Extract deliverables, milestones, ordering constraints and unknowns.
+3. **Break down the WBS**: shape the result as nested JSON (`title`, `kind`, `effortHours`, `children`) and
+   import it in one call with `wbs_import`. Estimate leaf effort in hours at 8 hours per person-day;
+   confirm anything uncertain with the user before importing.
+4. **Schedule**: call `schedule_compute`. Take the project start/end from the user or the project metadata;
+   if neither exists, ask first — never invent dates.
+5. **Violations**: call `violations_list`. Explain each one in a single sentence: type, tasks involved, why.
+   Do not silently change deadlines or dependencies; propose the fix to the user first.
+6. **Summarise**: task count, project start/end, critical path (`schedule_critical_path`) and violation count.
 
-约束：
+Constraints:
 
-- 本命令只建立计划，不写实现代码。
-- 任务标题使用需求中的原始术语，同一事物全篇同一称呼。
-- 每个叶子任务必须给出投入估算；群组与里程碑不设投入。
+- This command only builds the plan; it does not write implementation code.
+- Use the terminology from the requirement for task titles, and use one name per thing throughout.
+- Every leaf must carry an effort estimate; groups and milestones carry none.
+
+Reply to the user in the language they are writing in.

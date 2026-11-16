@@ -1,5 +1,5 @@
 {
-  "description": "Claude Code 任务完成时自动回写同名 KaidoPlan 任务（US-E5-03 验收 3）",
+  "description": "Write the same-titled KaidoPlan task back as done when a Claude Code task completes",
   "hooks": {
     "TaskCompleted": [
       {
