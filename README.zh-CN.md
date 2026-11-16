@@ -1,10 +1,10 @@
 # 用 AI 智能体做项目：KaidoPlan 接入指南
 
-> **任意 MCP 宿主粘贴包：** [docs/agents/](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/) — 一份条目，复制即用的 MCP 与规则；`tools/list` = 21。
+> **一份条目通吃所有 MCP 宿主**——下表与合并脚本对 Cursor、Gemini CLI、VS Code、WorkBuddy 以及其他任意 stdio 客户端都适用；`tools/list` = 21。
 
 [English](README.md) · **简体中文**
 
-> **正本在主仓**：[`cygnusyang/KaidoPlan` → `Plugins/`](https://github.com/cygnusyang/KaidoPlan/tree/main/Plugins)——本仓是 Claude Code 插件的独立安装入口，issue 与 PR 请提到主仓。
+> **正本在主开发仓的 `Plugins/` 目录**（该仓不公开），本仓是 Claude Code 插件的独立安装入口，issue 与 PR 提到本仓即可。
 
 > 面向两种人：① 想让 AI 帮忙拆 WBS、排期、盯进度的人；② 要给某个智能体（Claude Code / Codex / Cursor / Gemini CLI / VS Code / CodeBuddy / WorkBuddy）接上 KaidoPlan 的人。
 > 本文走查部分在 KaidoPlan v0.9.1（2026-10-25）用 release 产物实测通过；MCP 契约本身（`initialize` → `protocolVersion 2024-11-05`、`tools/list` → **21 个工具**）于 2026-11-16 在 v3.11.x 上复验。宿主侧配置按各家官方格式给出，边界见文末「验证范围」。
@@ -252,7 +252,7 @@ PY
 - **VS Code 有两套格式。** 现行 Copilot harness 读的是 `mcpServers`——来自工作区根 `.mcp.json`（所以 VS Code、Claude Code、CodeBuddy 可以共用一个文件）或 `~/.copilot/mcp-config.json`。`.vscode/mcp.json` 里的 `servers` 属于旧的 Local harness，已弃用，2027 年 2 月移除。
 - **WorkBuddy 不会自动信任。** 新加的条目在你点**信任**之前是不生效的。
 
-逐宿主的粘贴包（含规则块）：[docs/agents/](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/)；通用条目在 [`mcp.md`](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/mcp.md)，其余页面只补该宿主的特殊点。
+上面的表格加上 §3 的规则块就是接入所需的全部内容；本仓的 Claude Code 插件只额外提供斜杠命令与回写 hook。
 
 ## 7. WBS 怎么拆（重点）
 
@@ -418,6 +418,6 @@ AI：逐任务实现 → status_update done → 群组完成度自动聚合
 
 ## 协议
 
-本仓库内容（插件 manifest、MCP 配置、hook 脚本、斜杠命令、包装脚本）以 [MIT 协议](LICENSE) 开源——欢迎 fork、修改、发布你自己的版本；改进欢迎以 PR 提到[主仓](https://github.com/cygnusyang/KaidoPlan/tree/main/Plugins)。
+本仓库内容（插件 manifest、MCP 配置、hook 脚本、斜杠命令、包装脚本）以 [MIT 协议](LICENSE) 开源——欢迎 fork、修改、发布你自己的版本；改进欢迎在本仓提 PR。
 
 它调度的 KaidoPlan 应用与 CLI 二进制仍是专有软件，需要有效的 license 或订阅。

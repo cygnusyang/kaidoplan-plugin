@@ -1,10 +1,10 @@
 # KaidoPlan for AI agents
 
-> **Paste packs, any MCP host:** [docs/agents/](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/) — one entry, copy-ready MCP + rules; `tools/list` = 21.
+> **One entry for every MCP host** — the table and the merge script below serve Cursor, Gemini CLI, VS Code, WorkBuddy and any other stdio client; `tools/list` = 21.
 
 **English** · [简体中文](README.zh-CN.md)
 
-> **Source of truth:** [`cygnusyang/KaidoPlan` → `Plugins/`](https://github.com/cygnusyang/KaidoPlan/tree/main/Plugins) — this repo is the standalone install target for the Claude Code plugin; file issues and PRs against the main repo.
+> **Source of truth:** the `Plugins/` directory of the main development repository (kept private) is the source; this repo is the standalone install target for the Claude Code plugin, so issues and PRs go here.
 
 > Two audiences: ① you want an AI to break down a WBS, produce a schedule and track progress; ② you want to wire KaidoPlan into an agent (Claude Code / Codex / Cursor / Gemini CLI / VS Code / CodeBuddy / WorkBuddy).
 > The walkthrough in this page was run against KaidoPlan v0.9.1 release binaries on macOS (2026-10-25); the MCP contract itself (`initialize` → `protocolVersion 2024-11-05`, `tools/list` → **21 tools**) was re-verified on 2026-11-16 against v3.11.x. Host-side configuration follows each vendor's documented format — see "Scope of verification" at the end.
@@ -259,7 +259,7 @@ Two things that trip people up:
 - **VS Code has two formats.** The current Copilot harness reads `mcpServers` — from the workspace-root `.mcp.json` (so VS Code, Claude Code and CodeBuddy can share one file) or from `~/.copilot/mcp-config.json`. The `servers` key in `.vscode/mcp.json` belongs to the older Local harness, deprecated and removed in February 2027.
 - **WorkBuddy does not auto-trust.** A newly added entry stays inert until you click **Trust** in its connector list.
 
-Paste-ready pages, including the rules block: [docs/agents/](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/) — [`mcp.md`](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/mcp.md) holds the generic entry; the other pages only add host-specific notes.
+The table above plus the rule block in §3 is everything needed to connect; the Claude Code plugin in this repo only adds the slash commands and the write-back hook.
 
 ## 7. How to break down a WBS (the important part)
 
@@ -445,6 +445,6 @@ Two collaboration rules:
 
 ## License
 
-This repository (plugin manifest, MCP configuration, hook scripts, slash commands, wrapper scripts) is released under the [MIT License](LICENSE) — fork it, tweak it, ship your own flavor; improvements welcome via PR against the [main repo](https://github.com/cygnusyang/KaidoPlan/tree/main/Plugins).
+This repository (plugin manifest, MCP configuration, hook scripts, slash commands, wrapper scripts) is released under the [MIT License](LICENSE) — fork it, tweak it, ship your own flavor; improvements welcome via PR in this repo.
 
 The KaidoPlan application and CLI binaries it orchestrates remain proprietary and require a valid license or subscription.
