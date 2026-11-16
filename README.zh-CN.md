@@ -1,6 +1,6 @@
 # 用 AI 智能体做项目：KaidoPlan 接入指南
 
-> **四宿主粘贴包（Claude / Codex / Cursor / WorkBuddy）：** [docs/agents/](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/) — 复制即用的 MCP 与规则；`tools/list` = 21。
+> **任意 MCP 宿主粘贴包：** [docs/agents/](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/) — 一份条目，复制即用的 MCP 与规则；`tools/list` = 21。
 
 [English](README.md) · **简体中文**
 
@@ -187,7 +187,7 @@ Codex 没有斜杠命令、没有可挂的任务完成事件，只有 `config.to
 # 1) 注册 MCP → 写入 ~/.codex/config.toml
 cat >> ~/.codex/config.toml <<EOF
 
-[mcp_servers.kaido]
+[mcp_servers.kaidoplan]
 command = "$KAIDOPLAN/.build/release/KaidoPlanMCP"
 args = []
 EOF
@@ -213,67 +213,46 @@ Codex 里没有 `/kaidoplan plan`，用一句话触发同样流程：
 
 > 本机 `codex` CLI 不在 PATH（装的是桌面版），上述 `config.toml` 按其现有 `[mcp_servers.*]` 结构给出；首次使用请确认 `codex` 能列出 kaidoplan 工具。
 
-## 其他 MCP 宿主（Cursor · Gemini CLI · VS Code · WorkBuddy）
+## 任何 MCP 宿主：同一份条目（Cursor · Gemini CLI · VS Code · WorkBuddy · 其他）
 
-这四家都是 MCP-only：同一个 server、同样 21 个工具、同一段规则块。二进制名以 `command -v kaidoplan-mcp` 的输出为准——宿主不继承你的 shell `PATH` 时写绝对路径。
+这几家都是 MCP-only：同一个 server、同样 21 个工具、同一段规则块。条目本身不变，变的只有写进哪个文件、顶层键叫什么：
 
-### Cursor
-
-```bash
-# 项目级（随仓库提交）
-mkdir -p .cursor
-cat > .cursor/mcp.json <<'EOF'
-{ "mcpServers": { "kaidoplan": { "command": "kaidoplan-mcp" } } }
-EOF
+```json
+{ "mcpServers": { "kaidoplan": { "command": "kaidoplan-mcp", "args": [], "env": {} } } }
 ```
 
-用户级：把同样的 `mcpServers.kaidoplan` 合并进 `~/.cursor/mcp.json`——**合并，不要整文件覆盖**，那里面还有你其他的 server。规则：把 §3 那段放进项目根的 `AGENTS.md`，或写成 `.cursor/rules/kaidoplan.mdc`。
+| 宿主 | 文件 | 顶层键 | 写入之后 |
+|---|---|---|---|
+| Cursor | `~/.cursor/mcp.json` 或 `.cursor/mcp.json` | `mcpServers` | 合并写入，不要整文件覆盖 |
+| Gemini CLI | `~/.gemini/settings.json` 或 `.gemini/settings.json` | `mcpServers` | `/mcp` 里能看见该 server |
+| VS Code（Copilot harness） | 工作区根 `.mcp.json`，或 `~/.copilot/mcp-config.json` | `mcpServers` | 与 Claude Code 共用同一个文件 |
+| VS Code（Local harness，已弃用） | `.vscode/mcp.json` | `servers` | 需在 MCP 视图手动启动；harness 2027-02 移除 |
+| WorkBuddy | `~/.workbuddy/mcp.json` | `mcpServers` | 点一次**信任** |
+| 其他任意 stdio 客户端 | 该客户端自己的配置 | 它自己的键 | 重启后数工具数 = 21 |
 
-### Gemini CLI
-
-```bash
-# 项目级；全局安装把同一个对象写到 ~/.gemini/settings.json
-mkdir -p .gemini
-cat > .gemini/settings.json <<'EOF'
-{ "mcpServers": { "kaidoplan": { "command": "kaidoplan-mcp", "args": [] } } }
-EOF
-```
-
-在 Gemini CLI 里用 `/mcp` 看连接状态；规则写 `GEMINI.md`（或 `AGENTS.md`）。
-
-### VS Code（Copilot agent 模式）
-
-VS Code 用的是 **`servers`** 对象，不是 `mcpServers`：
+一个脚本通吃所有 JSON 型宿主——只替换 `kaidoplan` 这一个键，文件里其他 server 原样保留：
 
 ```bash
-mkdir -p .vscode
-cat > .vscode/mcp.json <<'EOF'
-{
-  "servers": {
-    "kaidoplan": { "type": "stdio", "command": "kaidoplan-mcp" }
-  }
-}
-EOF
-```
-
-然后在扩展面板的 MCP servers 视图里手动启动它（VS Code 不会自动拉起 stdio server）。规则：`AGENTS.md` 或 `.github/copilot-instructions.md`。
-
-### WorkBuddy
-
-```bash
-python3 - <<'PY'
-import json, pathlib, shutil
-path = pathlib.Path.home() / ".workbuddy" / "mcp.json"
+python3 - "$HOME/.cursor/mcp.json" mcpServers <<'PY'
+import json, pathlib, shutil, sys
+path, key = pathlib.Path(sys.argv[1]).expanduser(), sys.argv[2]
 mcp_bin = shutil.which("kaidoplan-mcp") or "/opt/homebrew/bin/kaidoplan-mcp"
 path.parent.mkdir(parents=True, exist_ok=True)
 data = json.loads(path.read_text()) if path.exists() else {}
-data.setdefault("mcpServers", {})["kaidoplan"] = {"type": "stdio", "command": mcp_bin, "args": []}
+data.setdefault(key, {})["kaidoplan"] = {"command": mcp_bin, "args": [], "env": {}}
 path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
 print("wrote", path)
 PY
 ```
 
-新加进去的条目不会自己生效：在 WorkBuddy 的连接器列表里对 `kaidoplan` 点一次**信任**。
+路径换成表里你那一行；只有已弃用的 VS Code Local harness 才把 `mcpServers` 换成 `servers`。
+
+两个容易踩的点：
+
+- **VS Code 有两套格式。** 现行 Copilot harness 读的是 `mcpServers`——来自工作区根 `.mcp.json`（所以 VS Code、Claude Code、CodeBuddy 可以共用一个文件）或 `~/.copilot/mcp-config.json`。`.vscode/mcp.json` 里的 `servers` 属于旧的 Local harness，已弃用，2027 年 2 月移除。
+- **WorkBuddy 不会自动信任。** 新加的条目在你点**信任**之前是不生效的。
+
+逐宿主的粘贴包（含规则块）：[docs/agents/](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/)；通用条目在 [`mcp.md`](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/mcp.md)，其余页面只补该宿主的特殊点。
 
 ## 7. WBS 怎么拆（重点）
 
@@ -435,7 +414,7 @@ AI：逐任务实现 → status_update done → 群组完成度自动聚合
 
 - **实测通过**（macOS，KaidoPlan v0.8.0 release 产物，2026-10-23）：§2、§4A、§4B、§5 的 KaidoPlan 侧命令，§8 全流程，插件 hook 回写。
 - **复验**（2026-11-16，v3.11.x）：stdio MCP 契约——`initialize` 返回 `protocolVersion 2024-11-05`，`tools/list` 返回 **21 个工具**（前四个为 `project_create`、`project_open`、`project_save`、`task_add`）。
-- **未实测**：Cursor / Gemini CLI / VS Code / WorkBuddy 的片段——文件名与 schema 按各家文档（2026-11-16 核对）给出，但本机未在这几个客户端上实际跑通；Codex 桌面版加载 `[mcp_servers.kaido]` 后工具是否即时可见（本机 `codex` CLI 不在 PATH）；CodeBuddy 的 `TaskCompleted` 事件 payload 字段（文档只列事件名未列字段，故未做 CodeBuddy 版 hook）。
+- **未实测**：Cursor / Gemini CLI / VS Code / WorkBuddy 的条目——文件名、顶层键与字段集按各家文档（2026-11-16 核对；其中 VS Code 现在有两套格式：Copilot harness 读工作区 `.mcp.json` 或 `~/.copilot/mcp-config.json` 里的 `mcpServers`，而 `.vscode/mcp.json` 的 `servers` 属于已弃用的 Local harness）给出，但本机未在这几个客户端上实际跑通；Codex 桌面版加载 `[mcp_servers.kaidoplan]` 后工具是否即时可见（本机 `codex` CLI 不在 PATH）；CodeBuddy 的 `TaskCompleted` 事件 payload 字段（文档只列事件名未列字段，故未做 CodeBuddy 版 hook）。
 
 ## 协议
 

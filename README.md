@@ -1,6 +1,6 @@
 # KaidoPlan for AI agents
 
-> **Paste packs (Claude / Codex / Cursor / WorkBuddy):** [docs/agents/](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/) — copy-ready MCP + rules; `tools/list` = 21.
+> **Paste packs, any MCP host:** [docs/agents/](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/) — one entry, copy-ready MCP + rules; `tools/list` = 21.
 
 **English** · [简体中文](README.zh-CN.md)
 
@@ -19,7 +19,7 @@
 | Codex CLI | MCP | `~/.codex/config.toml` | rules block in `AGENTS.md` |
 | Cursor | MCP | `~/.cursor/mcp.json` or `.cursor/mcp.json` | rules block in `AGENTS.md` / `.cursor/rules/` |
 | Gemini CLI | MCP | `~/.gemini/settings.json` or `.gemini/settings.json` | rules block in `GEMINI.md` / `AGENTS.md` |
-| VS Code (Copilot agent mode) | MCP | `.vscode/mcp.json` (workspace) or user profile | rules block in `AGENTS.md` / `.github/copilot-instructions.md` |
+| VS Code (Copilot harness) | MCP | `.mcp.json` (workspace root) or `~/.copilot/mcp-config.json` | rules block in `AGENTS.md` / `.github/copilot-instructions.md` |
 | CodeBuddy | MCP | `.mcp.json` | rules block in `CODEBUDDY.md` |
 | WorkBuddy | MCP | `~/.workbuddy/mcp.json` | rules block in `CODEBUDDY.md` / `AGENTS.md` |
 | Anything else | MCP over stdio | your client's own file | — |
@@ -193,7 +193,7 @@ Codex has no slash commands and no task-completed event to hook; it only has `co
 # 1) register MCP → ~/.codex/config.toml
 cat >> ~/.codex/config.toml <<EOF
 
-[mcp_servers.kaido]
+[mcp_servers.kaidoplan]
 command = "$KAIDOPLAN/.build/release/KaidoPlanMCP"
 args = []
 EOF
@@ -220,67 +220,46 @@ When a task is done, let it use the CLI (more controllable than MCP, and easier 
 
 > The `codex` CLI is not on PATH on this machine (the desktop app is installed instead); the `config.toml` snippet above follows its existing `[mcp_servers.*]` structure. On first use, confirm that `codex` lists the kaidoplan tools.
 
-## Other MCP hosts (Cursor · Gemini CLI · VS Code · WorkBuddy)
+## Any MCP host: one entry (Cursor · Gemini CLI · VS Code · WorkBuddy · anything else)
 
-All four are MCP-only: same server, same 21 tools, same rules block. The binary name is whatever `command -v kaidoplan-mcp` prints — use the absolute path if your host does not inherit your shell `PATH`.
+All of them are MCP-only: same server, same 21 tools, same rules block. Nothing about the entry changes — only the file it goes into and the name of the top-level key:
 
-### Cursor
-
-```bash
-# project level (committed with the repo)
-mkdir -p .cursor
-cat > .cursor/mcp.json <<'EOF'
-{ "mcpServers": { "kaidoplan": { "command": "kaidoplan-mcp" } } }
-EOF
+```json
+{ "mcpServers": { "kaidoplan": { "command": "kaidoplan-mcp", "args": [], "env": {} } } }
 ```
 
-User level: merge the same `mcpServers.kaidoplan` entry into `~/.cursor/mcp.json` — merge, never overwrite, that file holds your other servers. Rules: put the §3 block in `AGENTS.md` at the project root, or as `.cursor/rules/kaidoplan.mdc`.
+| Host | File | Key | What to do after writing |
+|---|---|---|---|
+| Cursor | `~/.cursor/mcp.json` or `.cursor/mcp.json` | `mcpServers` | merge, never overwrite |
+| Gemini CLI | `~/.gemini/settings.json` or `.gemini/settings.json` | `mcpServers` | `/mcp` shows the server |
+| VS Code (Copilot harness) | `.mcp.json` at the workspace root, or `~/.copilot/mcp-config.json` | `mcpServers` | shares the file with Claude Code |
+| VS Code (Local harness, deprecated) | `.vscode/mcp.json` | `servers` | start it from the MCP view; harness removed 2027-02 |
+| WorkBuddy | `~/.workbuddy/mcp.json` | `mcpServers` | click **Trust** |
+| Anything else | your client's config | its own key | restart, then count 21 tools |
 
-### Gemini CLI
-
-```bash
-# project level; for a global install write the same object to ~/.gemini/settings.json
-mkdir -p .gemini
-cat > .gemini/settings.json <<'EOF'
-{ "mcpServers": { "kaidoplan": { "command": "kaidoplan-mcp", "args": [] } } }
-EOF
-```
-
-Check the connection with `/mcp` inside Gemini CLI; rules go into `GEMINI.md` (or `AGENTS.md`).
-
-### VS Code (Copilot agent mode)
-
-VS Code uses a **`servers`** object, not `mcpServers`:
+One script covers every JSON host — it replaces only the `kaidoplan` key and keeps your other servers:
 
 ```bash
-mkdir -p .vscode
-cat > .vscode/mcp.json <<'EOF'
-{
-  "servers": {
-    "kaidoplan": { "type": "stdio", "command": "kaidoplan-mcp" }
-  }
-}
-EOF
-```
-
-Then start it from the MCP servers view in the Extensions panel (VS Code does not auto-start stdio servers until you do). Rules: `AGENTS.md` or `.github/copilot-instructions.md`.
-
-### WorkBuddy
-
-```bash
-python3 - <<'PY'
-import json, pathlib, shutil
-path = pathlib.Path.home() / ".workbuddy" / "mcp.json"
+python3 - "$HOME/.cursor/mcp.json" mcpServers <<'PY'
+import json, pathlib, shutil, sys
+path, key = pathlib.Path(sys.argv[1]).expanduser(), sys.argv[2]
 mcp_bin = shutil.which("kaidoplan-mcp") or "/opt/homebrew/bin/kaidoplan-mcp"
 path.parent.mkdir(parents=True, exist_ok=True)
 data = json.loads(path.read_text()) if path.exists() else {}
-data.setdefault("mcpServers", {})["kaidoplan"] = {"type": "stdio", "command": mcp_bin, "args": []}
+data.setdefault(key, {})["kaidoplan"] = {"command": mcp_bin, "args": [], "env": {}}
 path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
 print("wrote", path)
 PY
 ```
 
-A newly added entry does not activate by itself: open the connector list in WorkBuddy and click **Trust** on `kaidoplan`.
+Swap the path for your host's row; pass `servers` instead of `mcpServers` only for the deprecated VS Code Local harness.
+
+Two things that trip people up:
+
+- **VS Code has two formats.** The current Copilot harness reads `mcpServers` — from the workspace-root `.mcp.json` (so VS Code, Claude Code and CodeBuddy can share one file) or from `~/.copilot/mcp-config.json`. The `servers` key in `.vscode/mcp.json` belongs to the older Local harness, deprecated and removed in February 2027.
+- **WorkBuddy does not auto-trust.** A newly added entry stays inert until you click **Trust** in its connector list.
+
+Paste-ready pages, including the rules block: [docs/agents/](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/) — [`mcp.md`](https://github.com/cygnusyang/KaidoPlan/tree/main/docs/agents/mcp.md) holds the generic entry; the other pages only add host-specific notes.
 
 ## 7. How to break down a WBS (the important part)
 
@@ -462,7 +441,7 @@ Two collaboration rules:
 - **Verified** (macOS, KaidoPlan v0.9.1 release binaries, 2026-10-25): §2 including the MCP probe, §8 end to end with English CLI output.
 - **Re-verified** (2026-11-16, v3.11.x): the MCP contract over stdio — `initialize` returns `protocolVersion 2024-11-05`, `tools/list` returns **21 tools** starting with `project_create`, `project_open`, `project_save`, `task_add`.
 - **Verified earlier** (KaidoPlan v0.8.0, 2026-10-23, re-checked against the current tree but not re-run): §4A / §4B / §5 KaidoPlan-side commands and the plugin hook write-back.
-- **Not verified**: the Cursor / Gemini CLI / VS Code / WorkBuddy snippets — file names and schemas follow each vendor's documentation (checked 2026-11-16) but were not exercised against those clients here; whether Codex desktop exposes the `[mcp_servers.kaido]` tools immediately (no `codex` CLI on PATH here); CodeBuddy's `TaskCompleted` event payload fields (its docs list the event name but not the fields, so no CodeBuddy hook exists).
+- **Documented, not exercised**: the Cursor / Gemini CLI / VS Code / WorkBuddy entries — file names, top-level keys and field sets follow each vendor's documentation (checked 2026-11-16; note VS Code now carries two formats: the Copilot harness reads `mcpServers` from the workspace `.mcp.json` or `~/.copilot/mcp-config.json`, while `.vscode/mcp.json` with a `servers` key belongs to the deprecated Local harness), but were not run against those clients on this machine; whether Codex desktop exposes the `[mcp_servers.kaidoplan]` tools immediately (no `codex` CLI on PATH here); CodeBuddy's `TaskCompleted` event payload fields (its docs list the event name but not the fields, so no CodeBuddy hook exists).
 
 ## License
 
