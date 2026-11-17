@@ -25,6 +25,7 @@ jobs:
       - name: Install KaidoPlan CLI (provides the MCP server binary)
         run: |
           brew tap cygnusyang/kaidoplan
+          brew trust cygnusyang/kaidoplan
           brew install kaidoplan-cli
           command -v kaidoplan-mcp
 
