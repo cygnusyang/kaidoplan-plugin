@@ -2,10 +2,10 @@
 """Smoke-test the KaidoPlan MCP server through the plugin launcher.
 
 Spawns the launcher (bin/kaidoplan-mcp) exactly as an MCP host would, performs
-the JSON-RPC handshake, lists tools and asserts the expected count. Exits 0
+the JSON-RPC handshake, lists tools and checks the required tool names. Exits 0
 when the server speaks MCP and exposes the expected tool surface.
 
-Usage: python3 mcp_smoke.py <launcher-path> [expected-tool-count]
+Usage: python3 mcp_smoke.py <launcher-path>
 """
 
 from __future__ import annotations
@@ -28,9 +28,23 @@ INITIALIZED = {"jsonrpc": "2.0", "method": "notifications/initialized"}
 TOOLS_LIST = {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
 
 
+# The shared KaidoPlan skill relies on these tools.
+REQUIRED_TOOLS = {
+    "project_create",
+    "project_open",
+    "schedule_compute",
+    "schedule_critical_path",
+    "status_update",
+    "task_get",
+    "task_list",
+    "task_update",
+    "violations_list",
+    "wbs_import",
+}
+
+
 def main() -> int:
     launcher = sys.argv[1] if len(sys.argv) > 1 else "bin/kaidoplan-mcp"
-    expected = int(sys.argv[2]) if len(sys.argv) > 2 else 21
 
     reqs = "\n".join(json.dumps(r) for r in (INITIALIZE, INITIALIZED, TOOLS_LIST)) + "\n"
     try:
@@ -69,9 +83,9 @@ def main() -> int:
         print("fail: tools/list did not return a result", file=sys.stderr)
         return 1
     names = [t["name"] for t in tools["result"]["tools"]]
-    if len(names) != expected:
-        print(f"fail: tools/list returned {len(names)} tools, expected {expected}", file=sys.stderr)
-        print("tools: " + ", ".join(sorted(names)), file=sys.stderr)
+    missing = REQUIRED_TOOLS.difference(names)
+    if missing:
+        print("fail: missing required tools: " + ", ".join(sorted(missing)), file=sys.stderr)
         return 1
     if len(names) != len(set(names)):
         print("fail: duplicate tool names", file=sys.stderr)

@@ -32,7 +32,7 @@ jobs:
           command -v kaidoplan-mcp
 
       - name: MCP stdio smoke test (launcher + handshake + tools/list)
-        run: python3 .github/scripts/mcp_smoke.py claude-code/bin/kaidoplan-mcp 21
+        run: python3 .github/scripts/mcp_smoke.py claude-code/bin/kaidoplan-mcp
 
       - name: No dead relative links in READMEs
         run: python3 .github/scripts/check_links.py .
