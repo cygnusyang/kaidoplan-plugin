@@ -55,7 +55,7 @@ hook 按同样顺序查找 `KaidoPlanCLI`（`KAIDOPLAN_CLI_BIN` → release → 
 `hooks/hooks.json` 注册 `TaskCompleted` 事件，调用 `bin/kaidoplan-task-hook`：
 
 1. 读取事件 JSON 的 `task_subject`（Claude Code 任务标题）。
-2. 用 `KaidoPlanCLI task list --json` 读取 `KAIDOPLAN_PROJECT` 项目，按标题精确匹配。
+2. 将目标路径传给 `KaidoPlanCLI task list --json --file <路径>`，按标题精确匹配 CLI 返回的任务。
 3. 恰好匹配一个任务且状态不是 `done` 时，执行 `kaidoplan status update <id> --status done`。
 
 标题是两套任务系统之间的连接键，属于**约定而非强约束**：
@@ -70,7 +70,7 @@ hook 按同样顺序查找 `KaidoPlanCLI`（`KAIDOPLAN_CLI_BIN` → release → 
 - 匹配 0 个或多个任务、缺少 `KAIDOPLAN_PROJECT`、找不到 `KaidoPlanCLI`、事件格式非法时，
   只向 stderr 写原因，不回写、不阻塞 Claude Code 的任务完成。除 Python 解释器缺失外，
   hook 始终以 0 退出。
-- hook 经 CLI 直接写 `.kaido` 文件，应用不会自动刷新。两边同时编辑会互相覆盖：
+- hook 通过官方 CLI 更新指定的 `.kaido` 项目，应用不会自动刷新。两边同时编辑会互相覆盖：
   hook 先写、应用后保存时，应用内存中的旧数据会覆盖回写结果。回写期间关闭应用，
   或回写后重新打开再编辑。
 - `KAIDOPLAN_CLI_BIN` 指定 CLI 路径；`KAIDOPLAN_MCP_BIN` 指定 MCP 服务路径，两者独立。

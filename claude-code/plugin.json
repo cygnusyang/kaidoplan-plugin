@@ -1,0 +1,7 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "kaidoplan",
+  "version": "0.2.0",
+  "description": "Plan, schedule, and track tasks in KaidoPlan.",
+  "author": { "name": "KaidoPlan" }
+}

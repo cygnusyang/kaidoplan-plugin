@@ -125,6 +125,17 @@ def main():
     if not subject or not project:
         return 0
 
+    if not os.path.isabs(project):
+        cwd = event.get("cwd")
+        if not isinstance(cwd, str) or not os.path.isabs(cwd):
+            note("a relative KAIDOPLAN_PROJECT requires the event working directory")
+            return 0
+        project = os.path.join(cwd, project)
+    project = os.path.realpath(project)
+    if not project.lower().endswith(".kaido") or not os.path.isfile(project):
+        note("KAIDOPLAN_PROJECT must identify an existing .kaido file")
+        return 0
+
     cli = find_cli()
     if cli is None:
         note("KaidoPlanCLI not found, skipping (run swift build, install via Homebrew, or set KAIDOPLAN_CLI_BIN)")
@@ -132,8 +143,7 @@ def main():
 
     # The CLI writes atomically, so the project file's inode changes and locking it
     # directly is useless. Lock a stable path derived from the real project path.
-    real = os.path.realpath(project)
-    lock_name = "kaidoplan-hook-" + hashlib.sha256(real.encode()).hexdigest()[:16] + ".lock"
+    lock_name = "kaidoplan-hook-" + hashlib.sha256(project.encode()).hexdigest()[:16] + ".lock"
     lock_path = os.path.join(tempfile.gettempdir(), lock_name)
     try:
         with open(lock_path, "a") as lock_file:

@@ -17,7 +17,9 @@ jobs:
           python3 - <<'EOF'
           import json
           from pathlib import Path
-          for rel in ("claude-code/.claude-plugin/plugin.json", "claude-code/.mcp.json", "claude-code/hooks/hooks.json"):
+          paths = sorted(Path("claude-code").rglob("*.json"))
+          paths.append(Path(".agents/plugins/marketplace.json"))
+          for rel in paths:
               json.loads(Path(rel).read_text(encoding="utf-8"))
               print(f"ok: {rel}")
           EOF

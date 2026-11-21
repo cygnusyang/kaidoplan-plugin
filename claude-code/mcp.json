@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "kaidoplan": {
+      "type": "stdio",
+      "command": "kaidoplan-mcp",
+      "args": []
+    }
+  }
+}

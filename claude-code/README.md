@@ -54,7 +54,7 @@ Task IDs accept a full UUID or a **unique prefix of at least 4 characters**.
 `hooks/hooks.json` registers the `TaskCompleted` event, which calls `bin/kaidoplan-task-hook`:
 
 1. Reads `task_subject` (the Claude Code task title) from the event JSON.
-2. Reads the project at `KAIDOPLAN_PROJECT` with `KaidoPlanCLI task list --json` and matches by exact title.
+2. Passes the project path to `KaidoPlanCLI task list --json --file <path>` and matches the returned tasks by exact title.
 3. When exactly one task matches and its status is not `done`, runs `kaidoplan status update <id> --status done`.
 
 The title is the join key between the two task systems — a **convention, not a hard constraint**:
@@ -65,7 +65,7 @@ The title is the join key between the two task systems — a **convention, not a
 Safety boundaries:
 
 - On 0 or multiple matches, a missing `KAIDOPLAN_PROJECT`, a missing `KaidoPlanCLI`, or an invalid event format, the hook only writes the reason to stderr — no write-back, and Claude Code's task completion is never blocked. Except for a missing Python interpreter, the hook always exits 0.
-- The hook writes the `.kaido` file directly through the CLI; the app does not refresh automatically. Editing on both sides at once overwrites: if the hook writes first and the app saves later, the app's stale in-memory data overwrites the write-back. Close the app during write-back, or reopen it before editing.
+- The hook updates the selected `.kaido` project through the official CLI; the app does not refresh automatically. Editing on both sides at once overwrites: if the hook writes first and the app saves later, the app's stale in-memory data overwrites the write-back. Close the app during write-back, or reopen it before editing.
 - `KAIDOPLAN_CLI_BIN` sets the CLI path; `KAIDOPLAN_MCP_BIN` sets the MCP server path — the two are independent.
 - The hook takes an exclusive lock keyed by the project's real path (lock file in the system temp dir), so parallel subagents completing multiple tasks at once do not overwrite each other's write-back.
 - `task list --json` outputs a bare array (easy to iterate in scripts); MCP `task_list` returns `{"tasks": [...]}`. Both interfaces carry identical fields — only the envelope differs.

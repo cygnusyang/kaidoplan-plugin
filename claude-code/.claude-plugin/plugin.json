@@ -1,6 +1,6 @@
 {
   "name": "kaidoplan",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "KaidoPlan project planning: read requirements, build a WBS, schedule it, review the critical path and violations, write task status back.",
   "author": {
     "name": "KaidoPlan"

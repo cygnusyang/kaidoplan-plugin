@@ -1,0 +1,10 @@
+{
+  "name": "KaidoPlan",
+  "source": "kaidoplan",
+  "type": "mcp",
+  "version": "0.2.0",
+  "description_zh": "使用 KaidoPlan 拆解项目任务、生成排期并跟踪进度",
+  "description_en": "Break down, schedule, and track project tasks in KaidoPlan.",
+  "examples_zh": ["把需求拆解到指定的 .kaido 文件", "查看指定项目的关键路径和排期冲突"],
+  "examples_en": ["Break down requirements in the specified .kaido file", "Show the critical path and violations for the selected project"]
+}
